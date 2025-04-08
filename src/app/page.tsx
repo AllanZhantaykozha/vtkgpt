@@ -51,6 +51,8 @@ function stopSpeaking(): void {
   window.speechSynthesis.cancel();
 }
 
+
+
 const Chat = () => {
   const [messages, setMessages] = useState<IMessage[]>([]);
   const [text, setText] = useState<string>("");
@@ -117,7 +119,7 @@ const Chat = () => {
       setText(speechResult);
       setIsListening(false);
       setTimeout(() => {
-        addMessage();
+        void addMessage();
       }, 200);
     };
 
