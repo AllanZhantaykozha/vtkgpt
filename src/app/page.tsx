@@ -49,7 +49,7 @@ const Chat = () => {
   const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
 
   const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  // const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // ✅ TTS через браузерное API (можно заменить на ElevenLabs)
   function speak(text: string): void {
@@ -214,7 +214,7 @@ const Chat = () => {
         )}
 
         <div className="flex flex-col gap-2 pt-4">
-          <div className="flex gap-3">
+          <div className="flex gap-3">z
             <Input
                 value={text}
                 onChange={(e) => setText(e.currentTarget.value)}
