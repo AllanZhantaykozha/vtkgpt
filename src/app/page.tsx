@@ -7,22 +7,11 @@ import { Input } from "@/shared/ui/input";
 import { ScrollArea } from "@/shared/ui/scroll-area";
 import { Separator } from "@/shared/ui/separator";
 import { Wrapper } from "@/shared/wrapper/wrapper";
-import {
-  AudioLines,
-  Send,
-  MicOff,
-  VolumeX
-} from "lucide-react";
+import { AudioLines, Send, MicOff, VolumeX } from "lucide-react";
 import React, { useState, useEffect, useRef } from "react";
 import { askGPT } from "@/shared/lib/gpt";
 import { MarkdownViewer } from "@/shared/lib/markdown";
-
-interface IMessage {
-  text: string;
-  time: string;
-  data: string;
-  user: "gpt" | "me";
-}
+import { IMessage } from "@/types/message.type";
 
 function getCurrentTime(): string {
   const now = new Date();
@@ -39,32 +28,54 @@ function getCurrentDate(): string {
       .padStart(2, "0")}.${now.getFullYear()}`;
 }
 
-function speak(text: string): void {
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = "ru-RU";
-  utterance.rate = 1.8;
-  utterance.pitch = 0.5;
-  window.speechSynthesis.speak(utterance);
-}
-
-function stopSpeaking(): void {
-  window.speechSynthesis.cancel();
-}
-
-
-
 const Chat = () => {
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (text.trim()) {
+        void addMessage();
+      } else {
+        addSpeechMessage();
+      }
+    }
+  };
+
+
   const [messages, setMessages] = useState<IMessage[]>([]);
   const [text, setText] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [isListening, setIsListening] = useState<boolean>(false);
+  const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
 
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // ✅ TTS через браузерное API (можно заменить на ElevenLabs)
+  function speak(text: string): void {
+    if (typeof window === "undefined" || typeof window.speechSynthesis === "undefined") return;
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "ru-RU";
+    utterance.rate = 1.8;
+    utterance.pitch = 0.5;
+
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function stopSpeaking(): void {
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+    }
+  }
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const SpeechRecognition =
-          window.SpeechRecognition || window.webkitSpeechRecognition;
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (SpeechRecognition) {
         recognitionRef.current = new SpeechRecognition();
       }
@@ -146,7 +157,7 @@ const Chat = () => {
         <div className="flex gap-5 justify-between items-center">
           <div className="flex gap-5 items-center">
             <Avatar className="w-12 h-12">
-              <AvatarImage src="/logo.pngs" alt="logo" className={"object-cover w-full h-full"} />
+              <AvatarImage src="/logo2.png" alt="logo" className={"object-coveR"} />
               <AvatarFallback>VTK</AvatarFallback>
             </Avatar>
             <div className="text-md lg:text-xl font-semibold">Vtk Edu GPT</div>
@@ -158,8 +169,8 @@ const Chat = () => {
         {messages.length === 0 ? (
             <div className="p-5 flex flex-col items-center gap-5 w-fit h-full justify-center m-auto">
               <div className="gap-2 flex flex-col items-center">
-                <Avatar className="w-26 h-26">
-                  <AvatarImage src="/logo.pngs" alt="logo" className={"object-fill w-full h-full"} />
+                <Avatar className="w-64 h-64">
+                  <AvatarImage src="/logo2.png" alt="logo" className={"object-cover"} />
                   <AvatarFallback>VTK</AvatarFallback>
                 </Avatar>
                 <div className="flex-col text-center">
@@ -175,9 +186,7 @@ const Chat = () => {
               <div className="grid gap-2">
                 {messages.map((msg, i) => (
                     <div key={i}>
-                      <div className="text-center text-xs opacity-50 my-2">
-                        {msg.data}
-                      </div>
+                      <div className="text-center text-xs opacity-50 my-2">{msg.data}</div>
                       <div
                           className={cn(
                               "flex",
@@ -210,6 +219,7 @@ const Chat = () => {
                 value={text}
                 onChange={(e) => setText(e.currentTarget.value)}
                 placeholder="Напишите свое сообщение..."
+                onKeyDown={handleKeyDown}
             />
             <Button onClick={text ? addMessage : addSpeechMessage} disabled={loading}>
               {text ? <Send /> : <AudioLines />}
@@ -224,12 +234,11 @@ const Chat = () => {
           )}
 
           <div className="flex gap-3">
-            {typeof window !== "undefined" &&
-                window.speechSynthesis.speaking && (
-                    <Button variant="outline" onClick={stopSpeaking}>
-                      <VolumeX className="mr-2 w-4 h-4" /> Остановить речь
-                    </Button>
-                )}
+            {isSpeaking && (
+                <Button variant="outline" onClick={stopSpeaking}>
+                  <VolumeX className="mr-2 w-4 h-4" /> Остановить речь
+                </Button>
+            )}
             {isListening && (
                 <Button variant="outline" onClick={stopListening}>
                   <MicOff className="mr-2 w-4 h-4" /> Остановить запись
